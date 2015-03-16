@@ -1,6 +1,9 @@
-package tetris;
+package network;
 
 import java.io.Serializable;
+
+import tetris.PlayerSkeleton;
+import tetris.State;
 
 
 @SuppressWarnings("serial")

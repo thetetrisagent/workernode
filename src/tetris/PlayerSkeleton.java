@@ -1,7 +1,8 @@
 package tetris;
 public class PlayerSkeleton {
 	
-	public static final int NUM_FEATURES = 6;
+	public static final int NUM_FEATURES = 8;
+	public static final boolean DEBUG_MODE = false;
 	 
 	/*
 	 * BERTSEKAS FEATURES: 21
@@ -15,20 +16,24 @@ public class PlayerSkeleton {
 	private static final int NUM_HOLES_INDEX = 20;
 	
 	/*
-	 * DELLACHERIE FEATURES: 6
+	 * DELLACHERIE + CUSTOM FEATURES: 6 + 2
 	 * 0 = Landing Height
 	 * 1 = Eroded Piece Cells
 	 * 2 = Row Transitions
 	 * 3 = Column Transitions
 	 * 4 = Number of Holes
-	 * 5 = Board wells
+	 * 5 = Board Wells
+	 * 6 = Hole Depth
+	 * 7 = Rows With Holes
 	 */
 	private static final int LANDING_INDEX = 0;
 	private static final int ERODED_INDEX = 1;
 	private static final int ROW_TRAN_INDEX = 2;
 	private static final int COL_TRAN_INDEX = 3;
-	private static final int HOLES_INDEX = 4;
+	private static final int HOLE_NUM_INDEX = 4;
 	private static final int WELLS_INDEX = 5;
+	private static final int HOLE_DEPTH_INDEX = 6;
+	private static final int ROW_HOLE_INDEX = 7;
 	
 	private double[] weights;
 
@@ -52,75 +57,6 @@ public class PlayerSkeleton {
 		return bestMove;
 	}
 	
-//	private double evaluateMove(State s, int[] move) {
-//		int[] featureValues = new int[NUM_FEATURES];
-//		boolean inBlock = false;
-//		int[][] field = simulateMove(s,move);
-//		
-//		if (field == null) {
-//			return -999999999.0;
-//		}
-//		
-//		//Find Height + Holes
-//		//For each column from top, find top height, and find holes
-//		for(int i = 0; i < State.COLS; i++) {
-//			inBlock = false;
-//			for(int j = State.ROWS-1; j >= 0 ; j--) {
-//				if (!inBlock && field[j][i] > 0) {
-//					inBlock = true;
-//					featureValues[i] = j;
-//					if (featureValues[MAX_HEIGHT_INDEX] < j) {
-//						featureValues[MAX_HEIGHT_INDEX] = j;
-//					}
-//				}
-//				if (inBlock && field[j][i] == 0) {
-//					featureValues[NUM_HOLES_INDEX]++;
-//				}
-//			}
-//		}
-//		
-//		//Difference in column heights
-//		for (int i = 0; i < (State.COLS-1); i++) {
-//			featureValues[i+State.COLS] = Math.abs(featureValues[i+1] - featureValues[i]);
-//		}
-//		
-//		double value = 0;
-//		for (int i = 0; i < NUM_FEATURES; i++) {
-//			value += featureValues[i] * weights[i];
-//		}
-//		
-//		return value;
-//	}
-	
-//	private double evaluateMove(State s, int[] move) {
-//		int[] features = new int[NUM_FEATURES];
-//		int[][] field = simulateMove(s,move);
-//		
-//		if (field == null) {
-//			return -9999999.0;
-//		}
-//		
-//		// Extracting features from field
-//		for (int i = 0; i < State.COLS; i++) {
-//			features[i] = extractColumnHeight(field, i);
-//			if (features[MAX_HEIGHT_INDEX] < features[i]) {
-//				features[MAX_HEIGHT_INDEX] = features[i];
-//			}
-//		}
-//		for (int i = 0; i < (State.COLS-1); i++) {
-//			features[i + ADJ_COL_OFFSET] = Math.abs(features[i+1] - features[i]);
-//		}
-//		features[NUM_HOLES_INDEX] = extractHoles(field);
-//		
-//		// Evaluating move 
-//		double value = 0;
-//		for (int i = 0; i < NUM_FEATURES; i++) {
-//			value += features[i] * weights[i];
-//		}
-//		
-//		return value;
-//	}
-	
 	private double evaluateMove(State s, int[] move) {
 		int[] features = new int[NUM_FEATURES];
 		int[][] field = simulateMove(s,move, features);
@@ -132,25 +68,31 @@ public class PlayerSkeleton {
 		// Extracting features from field
 		features[ROW_TRAN_INDEX] = extractRowTransitions(field);
 		features[COL_TRAN_INDEX] = extractColTransitions(field);
-		features[HOLES_INDEX] = extractHoles(field);
+		features[HOLE_NUM_INDEX] = extractHoles(field);
 		features[WELLS_INDEX] = extractWells(field);
+		features[HOLE_DEPTH_INDEX] = extractHoleDepths(field);
+		features[ROW_HOLE_INDEX] = extractRowHoles(field);
 		
 		// Print features for debugging
-//		Play.printField(field);
-//		System.out.println("Landing: " + features[LANDING_INDEX]);
-//		System.out.println("Eroded: " + features[ERODED_INDEX]);
-//		System.out.println("Row Tran: " + features[ROW_TRAN_INDEX]);
-//		System.out.println("Col Tran: " + features[COL_TRAN_INDEX]);
-//		System.out.println("Holes: " + features[HOLES_INDEX]);
-//		System.out.println("Wells: " + features[WELLS_INDEX]);
-//		System.out.println();
-		
-		// Evaluating move 
-		double value = 0;
-		for (int i = 0; i < NUM_FEATURES; i++) {
-			value += weights[i] * features[i];
+		if (DEBUG_MODE) {
+			LocalSimulator.printField(field);
+			System.out.println("Landing: " + features[LANDING_INDEX]);
+			System.out.println("Eroded: " + features[ERODED_INDEX]);
+			System.out.println("Row Tran: " + features[ROW_TRAN_INDEX]);
+			System.out.println("Col Tran: " + features[COL_TRAN_INDEX]);
+			System.out.println("Holes: " + features[HOLE_NUM_INDEX]);
+			System.out.println("Wells: " + features[WELLS_INDEX]);
+			System.out.println("Hole Depth: " + features[HOLE_DEPTH_INDEX]);
+			System.out.println("Row Holes: " + features[ROW_HOLE_INDEX]);
+			System.out.println();
 		}
-		return value;
+
+		// Evaluating move 
+		double evaluation = 0;
+		for (int i = 0; i < NUM_FEATURES; i++) {
+			evaluation += weights[i] * features[i];
+		}
+		return evaluation;
 	}
 	
 	/**
@@ -169,20 +111,20 @@ public class PlayerSkeleton {
 	}
 	
 	/**
-	 * Calculates number of holes in field
+	 * Calculates number of holes in pile
 	 * @param field
-	 * @return number of holes in field
+	 * @return number of holes in pile
 	 */
 	private int extractHoles(int[][] field) {
 		int holeCount = 0;
-		boolean startCount = false;
+		boolean inPile = false;
 		for (int col = 0; col < State.COLS; col++) {
-			startCount = false;
+			inPile = false;
 			for (int row = State.ROWS-1; row >= 0; row--) {
-				if (!startCount && field[row][col] > 0) {
-					startCount = true;
+				if (!inPile && field[row][col] > 0) {
+					inPile = true;
 				}
-				if (startCount && field[row][col] == 0) {
+				if (inPile && field[row][col] == 0) {
 					holeCount++;
 				}
 			}
@@ -283,6 +225,69 @@ public class PlayerSkeleton {
 	}
 	
 	/**
+	 * Calculates the sum of hole depths
+	 * @param field
+	 * @return sum of hole depths
+	 */
+	private int extractHoleDepths(int[][] field) {
+		int sumHoleDepths = 0;
+		for (int col = 0; col < State.COLS; col++) {
+			sumHoleDepths += extractHoleDepth(field, col);
+		}
+		return sumHoleDepths;
+	}
+	
+	/**
+	 * The depth of a hole is measured as the sum of the number
+	 * of full cells above each hole.
+	 * @param field
+	 * @param col
+	 * @return hole depths given column
+	 */
+	private int extractHoleDepth(int[][] field, int col) {
+		int sumHoleDepth = 0;
+		int pileHeight = 0;
+		boolean inPile = false;
+		for (int row = (State.ROWS-1); row >=0; row--) {
+			if (!inPile && field[row][col] > 0) {
+				inPile = true;
+				pileHeight = row;
+			}
+			if (inPile && field[row][col] == 0) {
+				sumHoleDepth += pileHeight - row ;
+			}
+		}
+		return sumHoleDepth;
+	}
+	
+	/**
+	 * Calculates the number of rows with holes
+	 * @param field
+	 * @return number of rows with holes
+	 */
+	private int extractRowHoles(int[][] field) {
+		boolean inPile = false;
+		int[] hasHole = new int[State.ROWS];
+		for (int col = 0; col < State.COLS; col++) {
+			inPile = false;
+			for (int row = State.ROWS-1; row >= 0; row--) {
+				if (!inPile && field[row][col] > 0) {
+					inPile = true;
+				}
+				if (inPile && field[row][col] == 0) {
+					hasHole[row] = 1;
+				}
+			}
+		}
+		int rowsWithHole = 0;
+		for (int i = 0; i < hasHole.length; i++) {
+			rowsWithHole += hasHole[i];
+		}
+		
+		return rowsWithHole;
+	}
+	
+	/**
 	 * Simulates move while extracting the following features:
 	 * 	column heights, landing height, eroded piece cells
 	 * @param s
@@ -303,15 +308,10 @@ public class PlayerSkeleton {
 		
 		// height if the first column makes contact
 		int height = top[slot]-pBottom[nextPiece][orient][0];
-		int landingColumn = slot;
 		
 		//for each column beyond the first in the piece
 		for(int c = 1; c < pWidth[nextPiece][orient];c++) {
 			height = Math.max(height,top[slot+c]-pBottom[nextPiece][orient][c]);
-//			if (height < top[slot+c]-pBottom[nextPiece][orient][c]) {
-//				height = top[slot+c]-pBottom[nextPiece][orient][c];
-//				landingColumn = slot+c;
-//			}
 		}
 		
 		//check if game ended
@@ -355,8 +355,8 @@ public class PlayerSkeleton {
 		}
 		
 		// TODO: Include bricks removed using sets?
-		features[ERODED_INDEX] = rowsRemoved;
 		features[LANDING_INDEX] = height+pHeight[nextPiece][orient];
+		features[ERODED_INDEX] = rowsRemoved;
 		
 		return field;
 	}
