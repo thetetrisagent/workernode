@@ -2,12 +2,14 @@ package network;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.Scanner;
+
+import tetris.PlayerSkeleton;
+import tetris.State;
 
 public class ClientMain {
 
 	private static int PORT = 8888;
-	private static String HOST = "172.23.5.87";
+	private static String HOST = "localhost";
 	
 	@SuppressWarnings({ "resource" })
 	public static void main(String argv[]) throws Exception {
@@ -21,14 +23,31 @@ public class ClientMain {
 			System.out.println("done init!");
 			
 			while (true) {
-				Command newGame = (Command) inFromServer.readObject();
-				System.out.println("got new job!");
-				outToServer.writeObject(newGame.execute());
-				System.out.println("done job!");
+				//Request for a new job
+				Integer request = new Integer(0);
+				outToServer.writeObject(request);
+				double[] vector = (double[]) inFromServer.readObject();
+				while (vector == null) {
+					outToServer.writeObject(request);
+					vector = (double[]) inFromServer.readObject();
+				}
+				
+				System.out.println("Got New Job");
+				outToServer.writeObject(executeGame(vector));
+				System.out.println("Done Job");
 			}
 		} catch (Exception closedSocket) {
 			System.out.println("closed!");
 			closedSocket.printStackTrace();
 		}
+	}
+
+	private static Object executeGame(double[] vector) {
+		State s = new State();
+		PlayerSkeleton p = new PlayerSkeleton(vector);
+		while(!s.hasLost()) {
+			s.makeMove(p.pickMove(s,s.legalMoves()));
+		}
+		return new SampleVectorResult(vector, s.getRowsCleared());
 	}
 }
