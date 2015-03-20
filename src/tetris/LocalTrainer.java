@@ -81,7 +81,8 @@ public class LocalTrainer {
 				System.out.print(currVarVector[i] + ", ");
 			}
 			System.out.println();
-			System.out.println(iteration + ": " + sampleResults[sampleResults.length-(int)numSelected].getResults());
+			System.out.println(iteration + " top: " + sampleResults[sampleResults.length-1].getResults());
+			System.out.println(iteration + " bottom: " + sampleResults[sampleResults.length-(int)numSelected].getResults());
 			
 			iteration++;
 		}
