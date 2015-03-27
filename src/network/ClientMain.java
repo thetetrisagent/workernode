@@ -4,16 +4,17 @@ public class ClientMain {
 
 	private static int PORT = 8888;
 	private static String HOST = "localhost";
+//	private static String HOST = "175.156.127.2";
 	
 	@SuppressWarnings({ })
 	public static void main(String argv[]) throws Exception {
 		System.out.println("starto!");
 		
 		System.out.println("spawn training simulator!");
-		SimulatorClient trainingClient = new SimulatorClient(HOST,PORT);
+		SimulatorClient trainingClient = new SimulatorClient(HOST,PORT,"[Trainer]");
 		
 		System.out.println("spawn evaluating simulator!");
-		SimulatorClient evaluatingClient = new SimulatorClient(HOST,PORT+1);
+		SimulatorClient evaluatingClient = new SimulatorClient(HOST,PORT+1,"[Evaluator]");
 		
 		new Thread(trainingClient).start();
 		new Thread(evaluatingClient).start();

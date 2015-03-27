@@ -3,6 +3,7 @@ package network;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.util.Arrays;
 
 import tetris.PlayerSkeleton;
 import tetris.State;
@@ -11,12 +12,14 @@ public class SimulatorClient implements Runnable {
 
 	private String host;
 	private int port;
+	private String logger;
 	private ObjectOutputStream outToServer;
 	private ObjectInputStream inFromServer;
 	
-	public SimulatorClient(String host, int port) {
+	public SimulatorClient(String host, int port, String logger) {
 		this.host = host;
 		this.port = port;
+		this.logger = logger;
 	}
 	
 	@Override
@@ -24,24 +27,26 @@ public class SimulatorClient implements Runnable {
 		while (true) {
 			try {
 				connectToHost();
-				System.out.println("done init!");
+				log("done init!");
 				
 				while (true) {
 					//Request for a new job
 					Integer request = new Integer(0);
 					outToServer.writeObject(request);
 					double[] vector = (double[]) inFromServer.readObject();
+					log(Arrays.toString(vector));
 					while (vector == null) {
 						outToServer.writeObject(request);
 						vector = (double[]) inFromServer.readObject();
 					}
+					log("got it alr" + Arrays.toString(vector));
 					
-					System.out.println("Got New Job");
+					log("Got New Job");
 					outToServer.writeObject(executeGame(vector));
-					System.out.println("Done Job");
+					log("Done Job");
 				}
 			} catch (Exception closedSocket) {
-				System.out.println("closed!");
+				log("closed!");
 				closedSocket.printStackTrace();
 			}
 		}
@@ -58,7 +63,7 @@ public class SimulatorClient implements Runnable {
 				this.inFromServer = new ObjectInputStream(clientSocket.getInputStream());
 				break;
 			} catch (Exception e) {
-				System.out.println("SUMTIN WONG");
+				log("SUMTIN WONG");
 				e.printStackTrace();
 			}
 			if (timeoff < 8) {
@@ -74,6 +79,12 @@ public class SimulatorClient implements Runnable {
 			s.makeMove(p.pickMove(s,s.legalMoves()));
 		}
 		return new SampleVectorResult(vector, s.getRowsCleared());
+	}
+	
+	private void log(String toLog) {
+		if (port == 8889) {
+			System.out.println(this.logger+":"+toLog);
+		}
 	}
 
 }
