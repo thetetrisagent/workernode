@@ -4,7 +4,6 @@ public class ClientMain {
 
 	private static int PORT = 8888;
 	private static String HOST = "localhost";
-//	private static String HOST = "175.156.127.2";
 	
 	@SuppressWarnings({ })
 	public static void main(String argv[]) throws Exception {

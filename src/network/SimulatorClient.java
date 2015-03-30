@@ -82,9 +82,7 @@ public class SimulatorClient implements Runnable {
 	}
 	
 	private void log(String toLog) {
-		if (port == 8889) {
-			System.out.println(this.logger+":"+toLog);
-		}
+		System.out.println(this.logger+":"+toLog);
 	}
 
 }
