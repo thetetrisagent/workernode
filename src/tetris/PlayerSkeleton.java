@@ -44,10 +44,32 @@ public class PlayerSkeleton {
 	//implement this function to have a working system
 	public int pickMove(State s, int[][] legalMoves) {
 		int bestMove = 0;
-		double bestMoveEval = evaluateMove(s, legalMoves[0]);
+		double bestMoveEval = Double.NEGATIVE_INFINITY;
 		
-		for (int i = 1; i < legalMoves.length; i++) {
-			double thisEvaluation = evaluateMove(s, legalMoves[i]);
+		for (int i = 0; i < legalMoves.length; i++) {
+			// copy the initial State
+			SimulatedState simState = new SimulatedState(s);
+			
+			simState.makeMove(legalMoves[i]);
+			if (simState.hasLost()) {
+				continue;
+			}
+			
+			
+			double nextLayerTotalEvaluation = 0;
+			int[][] nextLayerLegalMoves = simState.legalMoves();
+			// consider the moves 2 moves ahead
+			for (int j = 0; j < nextLayerLegalMoves.length; j++) {
+				SimulatedState nextLayerSimState = new SimulatedState(simState);
+				
+				Double nextLayerEvaluation = evaluateMove(nextLayerSimState, nextLayerLegalMoves[j]);
+				nextLayerTotalEvaluation += nextLayerEvaluation;
+	
+			}
+			// use the average evaluated score at the end of 2 moves
+			
+			double thisEvaluation = nextLayerTotalEvaluation / nextLayerLegalMoves.length;
+			
 			if (thisEvaluation > bestMoveEval) {
 				bestMove = i;
 				bestMoveEval = thisEvaluation;
@@ -57,12 +79,14 @@ public class PlayerSkeleton {
 		return bestMove;
 	}
 	
+	
 	private double evaluateMove(State s, int[] move) {
 		int[] features = new int[NUM_FEATURES];
 		int[][] field = simulateMove(s,move, features);
 		
+
 		if (field == null) {
-			return -Double.MAX_VALUE;
+			return -Double.MAX_VALUE / 500.0;
 		}
 		
 		// Extracting features from field
@@ -141,10 +165,16 @@ public class PlayerSkeleton {
 	private int extractRowTransitions(int[][] field) {
 		int rowTransitions = 0;
 		for (int row = 0; row < State.ROWS; row++) {
+			if (field[row][0] == 0) {
+				rowTransitions += 1;
+			}
 			for (int col = 0; col < (State.COLS-1); col++) {
 				if (isTransition(field[row][col], field[row][col+1])) {
 					rowTransitions++;
 				}
+			}
+			if (field[row][State.COLS-1] == 0) {
+				rowTransitions += 1;
 			}
 		}
 		return rowTransitions;
@@ -159,10 +189,16 @@ public class PlayerSkeleton {
 	private int extractColTransitions(int[][] field) {
 		int colTransitions = 0;
 		for (int row = 0; row < (State.ROWS-2); row++) {
+			if (field[row][0] == 0) {
+				colTransitions++;
+			}
 			for (int col = 0; col < State.COLS; col++) {
 				if (isTransition(field[row][col], field[row+1][col])) {
 					colTransitions++;
 				}
+			}
+			if (field[row][State.COLS - 1] == 0) {
+				colTransitions++;
 			}
 		}
 		return colTransitions;
@@ -361,7 +397,7 @@ public class PlayerSkeleton {
 		return field;
 	}
 	
-	private int[][] cloneField(int[][] field) {
+	protected static int[][] cloneField(int[][] field) {
 		int [][] fieldClone = new int[field.length][];
 		for(int i = 0; i < field.length; i++)
 			fieldClone[i] = field[i].clone();
