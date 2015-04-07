@@ -141,10 +141,16 @@ public class PlayerSkeleton {
 	private int extractRowTransitions(int[][] field) {
 		int rowTransitions = 0;
 		for (int row = 0; row < State.ROWS; row++) {
+			if (field[row][0] == 0) {
+					rowTransitions += 1;
+			}
 			for (int col = 0; col < (State.COLS-1); col++) {
 				if (isTransition(field[row][col], field[row][col+1])) {
 					rowTransitions++;
 				}
+			}
+			if (field[row][State.COLS-1] == 0) {
+					rowTransitions += 1;
 			}
 		}
 		return rowTransitions;
@@ -159,12 +165,25 @@ public class PlayerSkeleton {
 	private int extractColTransitions(int[][] field) {
 		int colTransitions = 0;
 		for (int row = 0; row < (State.ROWS-2); row++) {
+			
 			for (int col = 0; col < State.COLS; col++) {
+				
 				if (isTransition(field[row][col], field[row+1][col])) {
 					colTransitions++;
 				}
+				
 			}
 		}
+		
+		for (int col = 0; col <State.COLS; col++) {
+			if (field[0][col] == 0) {
+				colTransitions++;
+			}
+			if (field[State.ROWS -1][col] == 0) {
+				colTransitions++;
+			}
+		}
+
 		return colTransitions;
 	}
 	
