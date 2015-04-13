@@ -10,6 +10,7 @@ import tetris.State;
 
 public class SimulatorClient implements Runnable {
 
+	private static final int NUM_AVG_GAME = 3;
 	private String host;
 	private int port;
 	private String logger;
@@ -42,7 +43,17 @@ public class SimulatorClient implements Runnable {
 					log("got it alr" + Arrays.toString(vector));
 					
 					log("Got New Job");
-					outToServer.writeObject(executeGame(vector));
+					if (port == 8888) {
+						int score = 0;
+						for (int i = 0; i < NUM_AVG_GAME; i++) {
+							score += ((SampleVectorResult) executeGame(vector)).getResults();
+						}
+						score /= NUM_AVG_GAME;
+						log("avged: " + score);
+						outToServer.writeObject(new SampleVectorResult(vector, score));
+					} else {
+						outToServer.writeObject(executeGame(vector));
+					}
 					log("Done Job");
 				}
 			} catch (Exception closedSocket) {
