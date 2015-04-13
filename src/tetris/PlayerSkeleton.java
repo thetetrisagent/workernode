@@ -1,39 +1,31 @@
 package tetris;
+
+import java.util.HashSet;
+
 public class PlayerSkeleton {
 	
-	public static final int NUM_FEATURES = 8;
+	public static final int NUM_FEATURES = 17;
 	public static final boolean DEBUG_MODE = false;
-	 
-	/*
-	 * BERTSEKAS FEATURES: 21
-	 *  0 -  9 = Individual Column Heights
-	 * 10 - 18 = Adjacent Column Height Difference
-	 *      19 = Maximum Height
-	 *      20 = Number of Holes
-	 */
-	private static final int ADJ_COL_OFFSET = 10;
-	private static final int MAX_HEIGHT_INDEX = 19;
-	private static final int NUM_HOLES_INDEX = 20;
 	
 	/*
-	 * DELLACHERIE + CUSTOM FEATURES: 6 + 2
+	 * DELLACHERIE + CUSTOM FEATURES: 17
 	 * 0 = Landing Height
 	 * 1 = Eroded Piece Cells
 	 * 2 = Row Transitions
 	 * 3 = Column Transitions
 	 * 4 = Number of Holes
-	 * 5 = Board Wells
-	 * 6 = Hole Depth
-	 * 7 = Rows With Holes
+	 * 5 = Hole Depth
+	 * 6 = Rows With Holes
+	 * 7-16 = Board Wells
 	 */
 	private static final int LANDING_INDEX = 0;
 	private static final int ERODED_INDEX = 1;
 	private static final int ROW_TRAN_INDEX = 2;
 	private static final int COL_TRAN_INDEX = 3;
 	private static final int HOLE_NUM_INDEX = 4;
-	private static final int WELLS_INDEX = 5;
-	private static final int HOLE_DEPTH_INDEX = 6;
-	private static final int ROW_HOLE_INDEX = 7;
+	private static final int HOLE_DEPTH_INDEX = 5;
+	private static final int ROW_HOLE_INDEX = 6;
+	private static final int WELLS_INDEX = 7;
 	
 	private double[] weights;
 
@@ -69,9 +61,9 @@ public class PlayerSkeleton {
 		features[ROW_TRAN_INDEX] = extractRowTransitions(field);
 		features[COL_TRAN_INDEX] = extractColTransitions(field);
 		features[HOLE_NUM_INDEX] = extractHoles(field);
-		features[WELLS_INDEX] = extractWells(field);
 		features[HOLE_DEPTH_INDEX] = extractHoleDepths(field);
 		features[ROW_HOLE_INDEX] = extractRowHoles(field);
+		extractWells(field, features);
 		
 		// Print features for debugging
 		if (DEBUG_MODE) {
@@ -93,21 +85,6 @@ public class PlayerSkeleton {
 			evaluation += weights[i] * features[i];
 		}
 		return evaluation;
-	}
-	
-	/**
-	 * Calculates the height of a column in field
-	 * @param field
-	 * @param col
-	 * @return height of column
-	 */
-	private int extractColumnHeight(int[][] field, int col) {
-		for (int row = State.ROWS-1; row >= 0; row--) {
-			if (field[row][col] > 0) {
-				return row+1;
-			}
-		}
-		return 0;
 	}
 	
 	/**
@@ -165,13 +142,10 @@ public class PlayerSkeleton {
 	private int extractColTransitions(int[][] field) {
 		int colTransitions = 0;
 		for (int row = 0; row < (State.ROWS-2); row++) {
-			
 			for (int col = 0; col < State.COLS; col++) {
-				
 				if (isTransition(field[row][col], field[row+1][col])) {
 					colTransitions++;
 				}
-				
 			}
 		}
 		
@@ -200,47 +174,40 @@ public class PlayerSkeleton {
 	}
 	
 	/**
-	 * Calculates the sum of well depths given field
+	 * Calculates weighted well depths for each column in pile
+	 * A well is a succession of uncovered empty cells in a column
+	 * such that their immediate adjacent cells are occupied
 	 * @param field
-	 * @return sum of well depths
+	 * @param features
 	 */
-	private int extractWells(int[][] field) {
-		int sumWells = 0;
+	private void extractWells(int[][] field, int[] features) {
 		for (int col = 0 ; col < State.COLS; col++) {
-			sumWells += extractWell(field, col);
-		}
-		return sumWells;
-	}
-	
-	/**
-	 * A well is a succession of unoccupied cells in a column such as their
-	 * left cells and right cells are both occupied.
-	 * @param field
-	 * @param col
-	 * @return depth of well for given column
-	 */
-	private int extractWell(int[][] field, int col) {
-		int wellDepth = 0;
-		for (int row = (State.ROWS-1); row >= 0; row--) {
-			if (field[row][col] != 0) {
-				break; // bottom of well
-			} else { // if cell is not empty
-				if (col == 0) {
-					if (field[row][col+1] != 0) {
-						wellDepth++;
-					}
-				} else if (col == (State.COLS-1)) {
-					if (field[row][col-1] != 0) {
-						wellDepth++;
-					}
-				} else {
-					if (field[row][col-1] != 0 && field[row][col+1] != 0) {
-						wellDepth++;
+			int wellDepth = 0;
+			int weightedWellDepth = 0;
+			for (int row = (State.ROWS-1); row >= 0; row--) {
+				if (field[row][col] != 0) {
+					break; // bottom of well
+				} else { // if cell is empty
+					if (col == 0) {
+						if (field[row][col+1] != 0) {
+							weightedWellDepth += 1 << wellDepth;
+							wellDepth++;
+						}
+					} else if (col == (State.COLS-1)) {
+						if (field[row][col-1] != 0) {
+							weightedWellDepth += 1 << wellDepth;
+							wellDepth++;
+						}
+					} else {
+						if (field[row][col-1] != 0 && field[row][col+1] != 0) {
+							weightedWellDepth += 1 << wellDepth;
+							wellDepth++;
+						}
 					}
 				}
 			}
+			features[WELLS_INDEX + col] = weightedWellDepth;
 		}
-		return wellDepth;
 	}
 	
 	/**
@@ -346,7 +313,13 @@ public class PlayerSkeleton {
 			}
 		}
 		
-		int rowsRemoved = 0;
+		//adjust top
+		for(int c = 0; c < pWidth[nextPiece][orient]; c++) {
+			top[slot+c]=height+pTop[nextPiece][orient][c];
+		}
+		
+		int rowsCleared = 0;
+		HashSet<Integer> blocksCleared = new HashSet<Integer>();
 		//check for full rows - starting at the top
 		for(int r = height+pHeight[nextPiece][orient]-1; r >= height; r--) {
 			//check all columns in the row
@@ -359,9 +332,11 @@ public class PlayerSkeleton {
 			}
 			//if the row was full - remove it and slide above stuff down
 			if(full) {
-				rowsRemoved++;
+				rowsCleared++;
 				//for each column
 				for(int c = 0; c < State.COLS; c++) {
+					blocksCleared.add(field[r][c]);
+					
 					//slide down all bricks
 					for(int i = r; i < top[c]; i++) {
 						field[i][c] = field[i+1][c];
@@ -375,7 +350,7 @@ public class PlayerSkeleton {
 		
 		// TODO: Include bricks removed using sets?
 		features[LANDING_INDEX] = height+pHeight[nextPiece][orient];
-		features[ERODED_INDEX] = rowsRemoved;
+		features[ERODED_INDEX] = (rowsCleared * blocksCleared.size());
 		
 		return field;
 	}
