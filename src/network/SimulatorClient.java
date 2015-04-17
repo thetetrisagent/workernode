@@ -42,7 +42,7 @@ public class SimulatorClient implements Runnable {
 					log("got it alr" + Arrays.toString(vector));
 					
 					log("Got New Job");
-					outToServer.writeObject(executeGame(vector));
+					outToServer.writeObject(executeGame(vector)); //execute the game and return results
 					log("Done Job");
 				}
 			} catch (Exception closedSocket) {

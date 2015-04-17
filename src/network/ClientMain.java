@@ -1,6 +1,6 @@
 package network;
 
-public class ClientMain {
+public class ClientMain { //creates and starts running training and evaluating clients.
 
 	private static int PORT = 8888;
 	private static String HOST = "localhost";
